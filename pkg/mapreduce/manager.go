@@ -15,6 +15,7 @@ type Manager struct{
 	RequestCh	chan TaskRequest
 	CompleteCh	chan TaskCompletion
 	DoneCh		chan struct{} //manager close this when the jon is done
+	CloseCh		chan struct{}
 	
 }
 
@@ -40,7 +41,7 @@ type TaskCompletion struct{
 	WorkerID	string
 }
 
-func NewManager(cg JobConfig) *Manager {
+func NewManager(cg JobConfig ) *Manager {
 	m := &Manager{
 		MapTasks: 			make([]Task , cg.NMap),
 		ReduceTasks: 		make([]Task , cg.NReduce),
@@ -135,6 +136,8 @@ func(m *Manager) Run() error {
 						m.ReduceTasks[i].Fail()
 					}
 				}
+			case <-m.CloseCh:
+				return nil
 
 		}
 	}
