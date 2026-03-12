@@ -85,6 +85,7 @@ func TestManager(t *testing.T){
 		if task.Task.Type != ReduceTask {
 			t.Fatal("The response recieved is not a reduce task")
 		}
+		close(m.CloseCh)
 	})
 
 	t.Run("race condition" , func(t *testing.T) {
@@ -127,6 +128,7 @@ func TestManager(t *testing.T){
 		if count != 9 {
 			t.Fatal("The response is wait and retry , the manager is doing")
 		}
+		close(m.CloseCh)
 	})
 
 	t.Run("timeout case" , func(t *testing.T) {
@@ -145,6 +147,7 @@ func TestManager(t *testing.T){
 			ResponseCh: ResponseChannel,
 		}
 
+
 		go m.Run()
 		m.RequestCh <- newRequest
 		task1 := <-ResponseChannel
@@ -154,8 +157,12 @@ func TestManager(t *testing.T){
 
 		m.RequestCh <- newRequest
 		task2 := <-ResponseChannel
+		if task1.Response != TaskAssigned{
+			t.Fatal("the recieved task is not the same ID")
+		}
 		if task1.Task.TaskID != task2.Task.TaskID {
 			t.Fatal("the recieved task is not the same ID")
 		}
+		close(m.CloseCh)
 	})
 }
