@@ -1,16 +1,12 @@
 package mapreduce
 
 import (
-	"fmt"
 	"testing"
 	"time"
 )
 
 
 func TestManager(t *testing.T){
-	//we need :
-	//1. A worker which will be used to stress test the manager
-	//2. A config which will be used to fill the manager
 
 	t.Run("worker requests task", func(t *testing.T) {
 		cg := JobConfig{
@@ -20,17 +16,16 @@ func TestManager(t *testing.T){
 			Timeout: 2*time.Second,
 		}
 		ResponseChannel := make(chan TaskResponse)
-		//every worker will have its own response channel , thats why we can do it this way `
+
 		m := NewManager(cg)
 		newRequest := TaskRequest{
 			WorkerID: "worker-1",
 			ResponseCh: ResponseChannel,
 		}	
-		//now all we need to do is send this request to the managers requestchannel after we do go.Run()
+
 		go m.Run()
 		m.RequestCh <- newRequest
 		task := <-ResponseChannel
-		fmt.Printf("recieved task %d" , task.Task)
 
 		if task.Task.Type != MapTask{
 			t.Fatal("The assigned task is of the wrong type")
@@ -42,5 +37,125 @@ func TestManager(t *testing.T){
 			t.Fatal("The response recieved does not convey properly if the task has been assigned or not")
 		}
 		close(m.CloseCh)
+	})
+
+	t.Run("manager transitions to reduce phase" , func (t *testing.T)  {
+		cg := JobConfig{
+			NMap: 1,
+			NReduce: 1,
+			inputSplits: []string{"file1.txt"} ,
+			Timeout: 2*time.Second,
+		}
+
+		ResponseChannel := make(chan TaskResponse)
+
+		m := NewManager(cg)
+		newRequest := TaskRequest{
+			WorkerID: "worker-1",
+			ResponseCh: ResponseChannel,
+		}
+
+		go m.Run()
+		m.RequestCh <- newRequest
+		task := <-ResponseChannel
+
+		if task.Task.State == TaskInProgress{
+			time.Sleep(1000 * time.Millisecond)
+			task.Task.State = TaskCompleted
+		}
+		task_completed := TaskCompletion{
+			TaskID: task.Task.TaskID,
+			WorkerID: newRequest.WorkerID,
+		}
+		m.CompleteCh <- task_completed
+
+		m.RequestCh <- newRequest
+		task = <-ResponseChannel
+
+		if task.Response == WaitAndRetry{
+			for i:=0 ; i<9 ; i++ {
+			time.Sleep(100 * time.Millisecond)
+			m.RequestCh <- newRequest
+			task = <-ResponseChannel
+			if 	task.Response == TaskAssigned {
+				break
+			}
+		}
+		}
+		if task.Task.Type != ReduceTask {
+			t.Fatal("The response recieved is not a reduce task")
+		}
+	})
+
+	t.Run("race condition" , func(t *testing.T) {
+		cg := JobConfig{
+			NMap: 1,
+			NReduce: 1,
+			inputSplits: []string{"file1.txt"} ,
+			Timeout: 2*time.Second,
+		}
+
+		ResponseChannel := make(chan TaskResponse)
+
+		m := NewManager(cg)
+		newRequest := TaskRequest{
+			WorkerID: "worker-1",
+			ResponseCh: ResponseChannel,
+		}
+
+		go m.Run()
+		m.RequestCh <- newRequest
+		task := <-ResponseChannel
+		if task.Task.State == TaskInProgress{
+			time.Sleep(1000 * time.Millisecond)
+			task.Task.State = TaskCompleted
+		}
+
+		m.RequestCh <- newRequest
+		task = <-ResponseChannel
+		count := 0
+		if task.Response == WaitAndRetry{
+			for i:=0 ; i<9 ; i++ {
+			time.Sleep(100 * time.Millisecond)
+			m.RequestCh <- newRequest
+			count++;
+			task = <-ResponseChannel
+			if 	task.Response == TaskAssigned {
+				break
+			}}
+		}
+		if count != 9 {
+			t.Fatal("The response is wait and retry , the manager is doing")
+		}
+	})
+
+	t.Run("timeout case" , func(t *testing.T) {
+		cg := JobConfig{
+			NMap: 1,
+			NReduce: 1,
+			inputSplits: []string{"file1.txt"} ,
+			Timeout: 2*time.Second,
+		}
+
+		ResponseChannel := make(chan TaskResponse)
+
+		m := NewManager(cg)
+		newRequest := TaskRequest{
+			WorkerID: "worker-1",
+			ResponseCh: ResponseChannel,
+		}
+
+		go m.Run()
+		m.RequestCh <- newRequest
+		task1 := <-ResponseChannel
+		if task1.Task.State == TaskInProgress{
+			time.Sleep(5 * time.Second)
+		}
+
+		m.RequestCh <- newRequest
+		task2 := <-ResponseChannel
+		if task1.Task.TaskID != task2.Task.TaskID {
+			t.Fatal("the recieved task is not the same ID")
+		}
 	})
 }

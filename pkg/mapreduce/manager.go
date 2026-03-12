@@ -48,7 +48,8 @@ func NewManager(cg JobConfig ) *Manager {
 		Timeout: 			cg.Timeout,
 		RequestCh: 			make(chan TaskRequest),					//unbuffered
 		CompleteCh: 		make(chan TaskCompletion , cg.NMap),	//buffered
-		DoneCh:				make(chan struct{}),					//unbuffered
+		DoneCh:				make(chan struct{}),	
+		CloseCh: 			make(chan struct{}),				//unbuffered
 	}
 
 	//two loops for paritioning the data when sending it to workers
