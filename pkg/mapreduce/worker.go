@@ -1,5 +1,6 @@
 package mapreduce
 
+import "time"
 
 /*
 what does the worker need to know:
@@ -19,7 +20,7 @@ type Worker struct{
 }
 
 type MapFunc func(key string , value string) []KeyValue
-type ReduceFunc func(key string, value string) string
+type ReduceFunc func(key string, value []string) string
 type KeyValue struct{
 	Key		string
 	Value	string
@@ -34,29 +35,37 @@ what does the worker loop needs to do:
 5.if WaitAndRetry then sleep briefly and loop
 6.if JobDone then return
 */
-func(w *Worker) Run(){
-	workerResponseCh := make(chan TaskResponse)
+func (w *Worker) Run() {
+    responseCh := make(chan TaskResponse)
+    request := TaskRequest{
+        WorkerID:   w.ID,
+        ResponseCh: responseCh,
+    }
 
-	newRequest := TaskRequest{
-		WorkerID: w.ID,
-		ResponseCh: workerResponseCh,
-	}
+    for {
+        w.ManagerRequestCh <- request
+        response := <-responseCh
 
-	w.ManagerRequestCh <- newRequest
-	newTask := <-workerResponseCh
+        switch response.Response {
+        case TaskAssigned:
+            if response.Task.Type == MapTask {
+                w.MapExecution(response.Task)
+            } else if response.Task.Type == ReduceTask {
+                w.ReduceExecution(response.Task)
+            }
+            w.ManagerCompleteCh <- TaskCompletion{
+                TaskID:   response.Task.TaskID,
+                WorkerID: w.ID,
+            }
 
-	if newTask.Task.Type == MapTask {
-		w.MapFn()//what to pass here now ?
-	} else if newTask.Task.Type == ReduceTask {
-		w.ReduceFn()
-	}
+        case WaitAndRetry:
+            time.Sleep(100 * time.Millisecond)
+            continue
 
-	TaskCompleted := TaskCompletion{
-		TaskID: newTask.Task.TaskID,
-		WorkerID: w.ID,
-	}
-	w.ManagerCompleteCh <- TaskCompleted
-
+        case JobDone:
+            return
+        }
+    }
 }
 
 /*
@@ -66,8 +75,8 @@ what does map execution do :
 3.partitions them by hashing the key
 4.writes each partition to an intermediate file with a deterministic name
 */
-func MapExecution(){
-
+func(w *Worker) MapExecution(task Task){
+	
 }
 
 /*
@@ -78,6 +87,6 @@ what does reduce execution do:
 4.writes the result to an output file
 */
 
-func ReduceExecution(){
+func(w *Worker) ReduceExecution(task Task){
 
 }
