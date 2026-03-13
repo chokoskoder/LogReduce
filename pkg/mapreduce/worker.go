@@ -10,9 +10,20 @@ how many reduce partitions to create when running a map task
 workerID
 */
 type Worker struct{
-
+	ID						string
+	ManagerRequestCh		chan TaskRequest
+	ManagerCompleteCh		chan TaskCompletion
+	NReduce					int
+	MapFn					MapFunc
+	ReduceFn				ReduceFunc
 }
 
+type MapFunc func(key string , value string) []KeyValue
+type ReduceFunc func(key string, value string) string
+type KeyValue struct{
+	Key		string
+	Value	string
+}
 
 /*
 what does the worker loop needs to do:
@@ -24,6 +35,27 @@ what does the worker loop needs to do:
 6.if JobDone then return
 */
 func(w *Worker) Run(){
+	workerResponseCh := make(chan TaskResponse)
+
+	newRequest := TaskRequest{
+		WorkerID: w.ID,
+		ResponseCh: workerResponseCh,
+	}
+
+	w.ManagerRequestCh <- newRequest
+	newTask := <-workerResponseCh
+
+	if newTask.Task.Type == MapTask {
+		w.MapFn()//what to pass here now ?
+	} else if newTask.Task.Type == ReduceTask {
+		w.ReduceFn()
+	}
+
+	TaskCompleted := TaskCompletion{
+		TaskID: newTask.Task.TaskID,
+		WorkerID: w.ID,
+	}
+	w.ManagerCompleteCh <- TaskCompleted
 
 }
 
