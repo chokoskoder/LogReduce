@@ -13,7 +13,7 @@ import (
 The aim of this code is to convert the json files into physical splits of the avro schema we will define
 */
 
-func preprocessing(inputPath string , outputPaths []string) error {
+func ConvertAndSplit(numSplits int , inputPath string) ([]string, error) {
 	/*
 	so the flow will be :
 	1)	read a json line
@@ -24,20 +24,21 @@ func preprocessing(inputPath string , outputPaths []string) error {
 
 
 	//start by reading the json file
-	file, err := os.Open("app_logs.json")
+	file, err := os.Open(inputPath)
+	var FilePaths []string
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
-	numSplits := 5
 	files := make([]*os.File , numSplits)
 
 	for i := 0 ; i < numSplits ; i++ {
 		f,err := os.Create(fmt.Sprintf("split-%d.avro" , i))
 		if err!= nil {
-			return err
+			return nil, err
 		}
+		FilePaths[i] = fmt.Sprintf("split-%d.avro" , i)
 		files[i] = f
 	}
 
@@ -54,7 +55,7 @@ func preprocessing(inputPath string , outputPaths []string) error {
 			Schema: LogEntrySchema,
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		writers[i] = w
 	}
@@ -80,5 +81,5 @@ func preprocessing(inputPath string , outputPaths []string) error {
 
 	}
 
-	return nil
+	return FilePaths, nil
 }
