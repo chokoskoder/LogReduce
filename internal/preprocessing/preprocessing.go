@@ -25,7 +25,7 @@ func ConvertAndSplit(numSplits int , inputPath string) ([]string, error) {
 
 	//start by reading the json file
 	file, err := os.Open(inputPath)
-	var FilePaths []string
+	FilePaths := make([]string, numSplits)
 	if err != nil {
 		return nil, err
 	}
