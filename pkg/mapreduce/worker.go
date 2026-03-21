@@ -1,6 +1,12 @@
 package mapreduce
 
-import "time"
+import (
+	"encoding/gob"
+	"fmt"
+	"hash/fnv"
+	"os"
+	"time"
+)
 
 /*
 what does the worker need to know:
@@ -19,11 +25,11 @@ type Worker struct{
 	ReduceFn				ReduceFunc
 }
 
-type MapFunc func(key string , value string) []KeyValue
-type ReduceFunc func(key string, value []string) string
+type MapFunc func(split string) []KeyValue
+type ReduceFunc func(key string, value [][]byte) []byte
 type KeyValue struct{
 	Key		string
-	Value	string
+	Value	[]byte      //opaque bytes , the system never reads them - (MAJOR DOUBT HERE)
 }
 
 /*
@@ -75,8 +81,48 @@ what does map execution do :
 3.partitions them by hashing the key
 4.writes each partition to an intermediate file with a deterministic name
 */
-func(w *Worker) MapExecution(task Task){
-	
+func(w *Worker) MapExecution(task Task) error {
+    KeyValue := w.MapFn(task.InputSplit)
+    Files := make([]*os.File , w.NReduce)
+    encoders := make([]*gob.Encoder , w.NReduce)
+    for i := range w.NReduce {
+        file, err := os.Create(fmt.Sprintf("temp-mr-map-%s-%d" , task.TaskID , i))
+        //create temp files for now
+        if err != nil { 
+            return err
+        }
+        encoders[i] = gob.NewEncoder(file)
+        Files[i] = file
+    }
+
+    for _,i := range KeyValue {
+        keyHash := partitionKey(i.Key , w.NReduce)
+        err := encoders[keyHash].Encode(i)
+        if err != nil {
+            return err
+        }
+    }
+
+    func() {
+		for _ , f := range Files {
+			f.Close()
+		}
+	}()
+
+    for i := range Files{
+        err := os.Rename(fmt.Sprintf("temp-mr-map-%s-%d" , task.TaskID , i) , fmt.Sprintf("mr-map-%s-%d" , task.TaskID , i))
+        if err!= nil{
+            return err
+        }
+    }
+    
+    return nil
+}
+
+func partitionKey(key string , nReduce int) int {
+    h := fnv.New32a()
+    h.Write([]byte(key))
+    return int(h.Sum32()) % nReduce
 }
 
 /*
