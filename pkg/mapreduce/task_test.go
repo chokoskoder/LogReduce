@@ -6,21 +6,19 @@ import (
 )
 
 func TestTaskTransitions(t *testing.T) {
-
 	// ============================================================
 	// VALID TRANSITIONS
 	// ============================================================
 
 	t.Run("assign idle task", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-0",
+			TaskID:     1,
 			Type:       MapTask,
 			State:      TaskIdle,
 			MaxRetries: 3,
 		}
 
 		err := task.Assign("worker-1")
-
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -40,7 +38,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("complete in-progress task", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-1",
+			TaskID:     1,
 			Type:       MapTask,
 			State:      TaskIdle,
 			MaxRetries: 3,
@@ -50,7 +48,6 @@ func TestTaskTransitions(t *testing.T) {
 		task.Assign("worker-1")
 
 		err := task.Complete()
-
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -65,7 +62,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("fail in-progress task returns to idle", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-2",
+			TaskID:     2,
 			Type:       MapTask,
 			State:      TaskIdle,
 			MaxRetries: 3,
@@ -74,7 +71,6 @@ func TestTaskTransitions(t *testing.T) {
 		task.Assign("worker-1")
 
 		err := task.Fail()
-
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -95,7 +91,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("fail exceeds max retries marks task as failed", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-3",
+			TaskID:     3,
 			Type:       MapTask,
 			State:      TaskIdle,
 			MaxRetries: 2,
@@ -128,7 +124,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("cannot complete idle task", func(t *testing.T) {
 		task := Task{
-			TaskID: "map-4",
+			TaskID: 4,
 			State:  TaskIdle,
 		}
 
@@ -144,7 +140,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("cannot fail idle task", func(t *testing.T) {
 		task := Task{
-			TaskID: "map-5",
+			TaskID: 5,
 			State:  TaskIdle,
 		}
 
@@ -160,7 +156,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("cannot assign in-progress task", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-6",
+			TaskID:     6,
 			State:      TaskIdle,
 			MaxRetries: 3,
 		}
@@ -178,7 +174,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("cannot assign completed task", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-7",
+			TaskID:     7,
 			State:      TaskIdle,
 			MaxRetries: 3,
 		}
@@ -198,7 +194,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("cannot complete completed task", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-8",
+			TaskID:     8,
 			State:      TaskIdle,
 			MaxRetries: 3,
 		}
@@ -215,7 +211,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("cannot fail completed task", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-9",
+			TaskID:     9,
 			State:      TaskIdle,
 			MaxRetries: 3,
 		}
@@ -235,7 +231,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("cannot assign failed task", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-10",
+			TaskID:     10,
 			State:      TaskIdle,
 			MaxRetries: 1,
 		}
@@ -260,7 +256,7 @@ func TestTaskTransitions(t *testing.T) {
 
 	t.Run("cannot complete failed task", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-11",
+			TaskID:     11,
 			State:      TaskIdle,
 			MaxRetries: 1,
 		}
@@ -280,10 +276,9 @@ func TestTaskTransitions(t *testing.T) {
 }
 
 func TestTaskTimeout(t *testing.T) {
-
 	t.Run("not timed out yet", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-12",
+			TaskID:     12,
 			State:      TaskIdle,
 			MaxRetries: 3,
 		}
@@ -298,7 +293,7 @@ func TestTaskTimeout(t *testing.T) {
 
 	t.Run("timed out", func(t *testing.T) {
 		task := Task{
-			TaskID:     "map-13",
+			TaskID:     13,
 			State:      TaskIdle,
 			MaxRetries: 3,
 		}
@@ -316,7 +311,7 @@ func TestTaskTimeout(t *testing.T) {
 
 	t.Run("idle task is never timed out", func(t *testing.T) {
 		task := Task{
-			TaskID: "map-14",
+			TaskID: 14,
 			State:  TaskIdle,
 		}
 

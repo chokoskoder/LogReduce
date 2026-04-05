@@ -1,7 +1,6 @@
 package mapreduce
 
 import (
-	"fmt"
 	"log"
 	"time"
 )
@@ -37,7 +36,7 @@ type TaskRequest struct{
 }
 
 type TaskCompletion struct{
-	TaskID		string
+	TaskID		int
 	WorkerID	string
 }
 
@@ -55,7 +54,7 @@ func NewManager(cg JobConfig ) *Manager {
 	//two loops for paritioning the data when sending it to workers
 	for i := 0 ; i <cg.NMap ; i++ {
 		m.MapTasks[i] = Task{
-			TaskID		:	fmt.Sprintf("map-%d" , i),
+			TaskID		:	i,
 			Type		:	MapTask,
 			State		:	TaskIdle ,
 			MaxRetries	:	3 ,
@@ -65,7 +64,7 @@ func NewManager(cg JobConfig ) *Manager {
 
 	for i := 0; i < cg.NReduce; i++ {
 		m.ReduceTasks[i] = Task{
-			TaskID		:	fmt.Sprintf("reduce-%d" , i),
+			TaskID		:	i,
 			Type		:	ReduceTask ,
 			State		:	TaskIdle ,
 			MaxRetries	:	3 ,
@@ -103,7 +102,7 @@ func(m *Manager) Run() error {
 					if m.MapTasks[i].TaskID == report.TaskID {
 						err := m.MapTasks[i].Complete()
 						if err != nil {
-  							log.Printf("task %s completion error: %v", m.MapTasks[i].TaskID, err)
+  							log.Printf("task %d completion error: %v", m.MapTasks[i].TaskID, err)
 						}
 						found = true
 						break
@@ -115,7 +114,7 @@ func(m *Manager) Run() error {
 							if m.ReduceTasks[i].TaskID == report.TaskID{
 								err := m.ReduceTasks[i].Complete()
 								if err != nil {
-									log.Printf("task %s completion error: %v", m.ReduceTasks[i].TaskID, err)
+									log.Printf("task %d completion error: %v", m.ReduceTasks[i].TaskID, err)
 								}
 								break
 							}
